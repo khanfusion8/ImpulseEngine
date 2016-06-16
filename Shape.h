@@ -84,31 +84,36 @@ struct Circle : public Shape
     const uint32 k_segments = 20;
 
     // Render a circle with a bunch of lines
-    glColor3f( body->r, body->g, body->b );
-    glBegin( GL_LINE_LOOP );
+    SDL_SetRenderDrawColor(gRenderer, body->r, body->g, body->b, 255);
+    
     real theta = body->orient;
     real inc = PI * 2.0f / (real)k_segments;
-    for(uint32 i = 0; i < k_segments; ++i)
-    {
-      theta += inc;
-      Vec2 p( std::cos( theta ), std::sin( theta ) );
-      p *= radius;
-      p += body->position;
-      glVertex2f( p.x, p.y );
-    }
-    glEnd( );
+    std::vector<Vec2> verts;
 
-    // Render line within circle so orientation is visible
-    glBegin( GL_LINE_STRIP );
+	for (int i = 0; i < k_segments; i++) {
+		theta += inc;
+		Vec2 p(std::cos(theta), std::sin(theta));
+		p *= radius;
+		p += body->position;
+	    verts[i].Set(p);
+	}
+	
+	for (int i = 0; i < k_segments; i++) {
+	    Vec2 vert;
+	    vert.Set(verts[i + 1]);
+		if (i == k_segments - 1) {
+		    vert.Set(verts[0]);
+		}
+		SDL_RenderDrawLine(gRenderer, verts[i].x, verts[i].y, vert.x, vert.y);
+	}
+
     Vec2 r( 0, 1.0f );
     real c = std::cos( body->orient );
     real s = std::sin( body->orient );
     r.Set( r.x * c - r.y * s, r.x * s + r.y * c );
     r *= radius;
     r = r + body->position;
-    glVertex2f( body->position.x, body->position.y );
-    glVertex2f( r.x, r.y );
-    glEnd( );
+    SDL_RenderDrawLine(gRenderer, body->position.x, body->position.y, r.x, r.y);
   }
 
   Type GetType( void ) const
@@ -186,14 +191,12 @@ struct PolygonShape : public Shape
 
   void Draw( void ) const
   {
-    glColor3f( body->r, body->g, body->b );
-    glBegin( GL_LINE_LOOP );
-    for(uint32 i = 0; i < m_vertexCount; ++i)
-    {
-      Vec2 v = body->position + u * m_vertices[i];
-      glVertex2f( v.x, v.y );
-    }
-    glEnd( );
+      SDL_SetRenderDrawColor(body->r, body->g, body->b, 255);
+      for (int i = 0; i < m_vertexCount; ++i) {
+          Vec2 vert;
+          vert.Set(m_vertices[i + 1 == m_vertexCount ? 0 : i + 1]);
+          SDL_RenderDrawLine(gRenderer, m_vertices[i].x, m_vertices[i].y, vert.x, vert.y);
+      }
   }
 
   Type GetType( void ) const
