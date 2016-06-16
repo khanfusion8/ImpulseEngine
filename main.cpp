@@ -19,89 +19,12 @@
 
 #include "Precompiled.h"
 
-#define ESC_KEY 27
-
 Scene scene( 1.0f / 60.0f, 10 );
 Clock g_Clock;
 bool frameStepping = false;
 bool canStep = false;
 
-void Mouse( int button, int state, int x, int y )
-{
-  x /= 10.0f;
-  y /= 10.0f;
-
-  if(state == GLUT_DOWN)
-    switch(button)
-    {
-    case GLUT_LEFT_BUTTON:
-      {
-        PolygonShape poly;
-        uint32 count = (uint32)Random( 3, MaxPolyVertexCount );
-        Vec2 *vertices = new Vec2[count];
-        real e = Random( 5, 10 );
-        for(uint32 i = 0; i < count; ++i)
-          vertices[i].Set( Random( -e, e ), Random( -e, e ) );
-        poly.Set( vertices, count );
-        Body *b = scene.Add( &poly, x, y );
-        b->SetOrient( Random( -PI, PI ) );
-        b->restitution = 0.2f;
-        b->dynamicFriction = 0.2f;
-        b->staticFriction = 0.4f;
-        delete [] vertices;
-      }
-      break;
-    case GLUT_RIGHT_BUTTON:
-      {
-        Circle c( Random( 1.0f, 3.0f ) );
-        Body *b = scene.Add( &c, x, y );
-      }
-      break;
-    }
-}
-
-void Keyboard(unsigned char key, int x, int y)
-{
-  switch(key)
-  {
-  case ESC_KEY:
-    exit( 0 );
-    break;
-  case 's':
-    {
-      //Circle c( 25.0f );
-      //scene.Add( &c, 400 + (rand( ) % 250) * ((rand( ) % 2 == 1) ? 1 : -1), 50 );
-      //OBB obb;
-      //real e = Random( 10.0f, 35.0f );
-      //obb.extents.Set( e, e );
-      //Body *b = scene.Add( &obb, 400 + (rand( ) % 250) * ((rand( ) % 2 == 1) ? 1 : -1), 50 );
-      //b->SetOrient( PI / 4.0f );
-      //b->restitution = 0.2f;
-      //b->dynamicFriction = 0.2f;
-      //b->staticFriction = 0.4f;
-    }
-    break;
-  case 'd':
-    {
-      //Circle c( 25.0f );
-      //scene.Add( &c, 420, 50 );
-    }
-      break;
-  case 'f':
-    frameStepping = frameStepping ? false : true;
-      break;
-  case ' ':
-    canStep = true;
-    break;
-  }
-}
-
-void PhysicsLoop( void )
-{
-  glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-  RenderString( 1, 2, "Left click to spawn a polygon" );
-  RenderString( 1, 4, "Right click to spawn a circle" );
+void PhysicsLoop( void ) {
 
   static double accumulator = 0;
 
@@ -133,41 +56,193 @@ void PhysicsLoop( void )
   g_Clock.Stop( );
 
   scene.Render( );
-
-  glutSwapBuffers( );
 }
 
-int main(int argc, char** argv)
+//Screen dimension constants
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
+
+//Starts up SDL and creates window
+bool init();
+
+//Loads media
+bool loadMedia();
+
+//Frees media and shuts down SDL
+void close();
+
+//Loads individual image as texture
+SDL_Texture* loadTexture( std::string path );
+
+//The window we'll be rendering to
+SDL_Window* gWindow = NULL;
+
+//The window renderer
+SDL_Renderer* gRenderer = NULL;
+
+bool init()
 {
-  glutInit(&argc, argv);
-  glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
-  glutInitWindowSize( 800, 600 );
-  glutCreateWindow( "PhyEngine" );
-  glutDisplayFunc( PhysicsLoop );
-  glutKeyboardFunc( Keyboard );
-  glutMouseFunc( Mouse );
-  glutIdleFunc( PhysicsLoop );
+	//Initialization flag
+	bool success = true;
 
-  glMatrixMode( GL_PROJECTION );
-  glPushMatrix( );
-  glLoadIdentity( );
-  gluOrtho2D( 0, 80, 60, 0 );
-  glMatrixMode( GL_MODELVIEW );
-  glPushMatrix( );
-  glLoadIdentity( );
+	//Initialize SDL
+	if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+	{
+		printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
+		success = false;
+	}
+	else
+	{
+		//Set texture filtering to linear
+		if( !SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" ) )
+		{
+			printf( "Warning: Linear texture filtering not enabled!" );
+		}
 
-  Circle c( 5.0f );
-  Body *b = scene.Add( &c, 40, 40 );
-  b->SetStatic( );
+		//Create window
+		gWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+		if( gWindow == NULL )
+		{
+			printf( "Window could not be created! SDL Error: %s\n", SDL_GetError() );
+			success = false;
+		}
+		else
+		{
+			//Create renderer for window
+			gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED );
+			if( gRenderer == NULL )
+			{
+				printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
+				success = false;
+			}
+			else
+			{
+				//Initialize renderer color
+				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
 
-  PolygonShape poly;
-  poly.SetBox( 30.0f, 1.0f );
-  b = scene.Add( &poly, 40, 55 );
-  b->SetStatic( );
-  b->SetOrient( 0 );
+				//Initialize PNG loading
+				int imgFlags = IMG_INIT_PNG;
+				if( !( IMG_Init( imgFlags ) & imgFlags ) )
+				{
+					printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
+					success = false;
+				}
+			}
+		}
+	}
 
-  srand( 1 );
-  glutMainLoop( );
+	return success;
+}
 
-  return 0;
+bool loadMedia()
+{
+	//Loading success flag
+	bool success = true;
+
+	//Nothing to load
+	return success;
+}
+
+void close()
+{
+	//Destroy window	
+	SDL_DestroyRenderer( gRenderer );
+	SDL_DestroyWindow( gWindow );
+	gWindow = NULL;
+	gRenderer = NULL;
+
+	//Quit SDL subsystems
+	IMG_Quit();
+	SDL_Quit();
+}
+
+SDL_Texture* loadTexture( std::string path )
+{
+	//The final texture
+	SDL_Texture* newTexture = NULL;
+
+	//Load image at specified path
+	SDL_Surface* loadedSurface = IMG_Load( path.c_str() );
+	if( loadedSurface == NULL )
+	{
+		printf( "Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError() );
+	}
+	else
+	{
+		//Create texture from surface pixels
+        newTexture = SDL_CreateTextureFromSurface( gRenderer, loadedSurface );
+		if( newTexture == NULL )
+		{
+			printf( "Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError() );
+		}
+
+		//Get rid of old loaded surface
+		SDL_FreeSurface( loadedSurface );
+	}
+
+	return newTexture;
+}
+
+int main( int argc, char* args[] )
+{
+	//Start up SDL and create window
+	if( !init() )
+	{
+		printf( "Failed to initialize!\n" );
+	}
+	else
+	{
+		//Load media
+		if( !loadMedia() )
+		{
+			printf( "Failed to load media!\n" );
+		}
+		else
+		{	
+			//Main loop flag
+			bool quit = false;
+
+			//Event handler
+			SDL_Event e;
+
+			Circle c( 5.0f );
+  			Body *b = scene.Add( &c, 40, 40 );
+  			b->SetStatic( );
+
+  			PolygonShape poly;
+  			poly.SetBox( 30.0f, 1.0f );
+  			b = scene.Add( &poly, 40, 55 );
+  			b->SetStatic( );
+  			b->SetOrient( 0 );
+
+			//While application is running
+			while( !quit )
+			{
+				//Handle events on queue
+				while( SDL_PollEvent( &e ) != 0 )
+				{
+					//User requests quit
+					if( e.type == SDL_QUIT )
+					{
+						quit = true;
+					}
+				}
+
+				//Clear screen
+				SDL_SetRenderDrawColor( gRenderer, 17, 17, 17, 255 );
+				SDL_RenderClear( gRenderer );
+
+
+
+				//Update screen
+				SDL_RenderPresent( gRenderer );
+				srand(1);
+			}
+		}
+	}
+
+	//Free resources and close SDL
+	close();
+
+	return 0;
 }
