@@ -40,7 +40,14 @@
 #include <cfloat>  // FLT_MAX
 #include <vector>
 
-#include "glut.h"
+#include </usr/include/SDL2/SDL.h>
+#include </usr/include/SDL/SDL_image.h>
+#include <stdio.h>
+#include <string>
+#include <cmath>
+#include <cassert> // assert
+#include <algorithm> // max, min
+
 #include "IEMath.h"
 #include "Clock.h"
 #include "Render.h"
